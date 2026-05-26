@@ -37,6 +37,7 @@ This service decouples **feature deployment** from **feature activation**. Once 
     - [Database Setup](#database-setup)
     - [Configuration](#configuration)
     - [Running the Service](#running-the-service)
+    - [Running the Frontend](#running-the-frontend)
 - [API Reference](#api-reference)
 - [Error Handling](#error-handling)
 - [Testing](#testing)
@@ -158,6 +159,28 @@ The service starts on port `8080` by default.
 |---|---|
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8080/api-docs |
+
+### Running the Frontend
+
+The React frontend is located in `frontend/` and proxies API calls to the Spring Boot backend on `http://localhost:8080`.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend starts on port `5173` by default.
+
+| Resource | URL |
+|---|---|
+| React App | http://localhost:5173 |
+
+Build the frontend:
+
+```bash
+npm run build
+```
 
 ---
 
