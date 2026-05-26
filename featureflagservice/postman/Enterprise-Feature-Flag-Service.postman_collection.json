@@ -1,0 +1,69 @@
+{
+  "info": {
+    "name": "Enterprise Feature Flag Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Feature",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/feature",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"featureName\": \"dark-mode\",\n  \"environment\": \"DEV\",\n  \"enabled\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "Get Features By Environment",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/features/DEV"
+      }
+    },
+    {
+      "name": "Toggle Feature",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/toggle-feature",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"featureName\": \"dark-mode\",\n  \"environment\": \"DEV\",\n  \"enabled\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Get Release History",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/release-history"
+      }
+    },
+    {
+      "name": "Swagger UI",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/swagger-ui.html"
+      }
+    }
+  ]
+}
