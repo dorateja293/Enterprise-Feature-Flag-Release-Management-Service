@@ -1,111 +1,183 @@
-# Enterprise Feature Flag and Release Management Service
+<div align="center">
 
-Enterprise Feature Flag and Release Management Service is a Java 17 Spring Boot backend for managing feature releases across DEV, QA, and PRODUCTION environments without redeploying applications. It stores feature flag state, records every toggle event, and exposes REST APIs for release workflow automation and audit tracking.
+# Feature Flag & Release Management Service
+
+**Manage feature releases across environments at runtime — no redeployments required.**
+
+![Java](https://img.shields.io/badge/Java-17-007396?style=flat-square&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.x-4479A1?style=flat-square&logo=mysql&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-3.x-C71A36?style=flat-square&logo=apachemaven&logoColor=white)
+</div>
+
+---
+
+## Overview
+
+This service decouples **feature deployment** from **feature activation**. Once deployed, flags can be toggled per environment via REST API — no code changes, no restarts, no risk to unrelated functionality.
+
+**Core capabilities:**
+
+| Capability | Description |
+|---|---|
+| Environment-scoped flags | Separate flag state for `DEV`, `QA`, and `PRODUCTION` |
+| Runtime toggling | Enable or disable features instantly via a single API call |
+| Immutable audit trail | Every toggle is recorded with before/after state and a timestamp |
+| Input validation | Guards against unknown environments, duplicate flags, and missing resources |
+| Interactive API docs | Swagger UI available out of the box |
+
+---
+
+## Table of Contents
+
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Database Setup](#database-setup)
+    - [Configuration](#configuration)
+    - [Running the Service](#running-the-service)
+- [API Reference](#api-reference)
+- [Error Handling](#error-handling)
+- [Testing](#testing)
+- [Roadmap](#roadmap)
+
+---
 
 ## Architecture
 
-The project follows a clean layered backend structure:
-
-```text
+```
 src/main/java/com/teja/featureflagservice/
-  config/
-    OpenApiConfig.java
-  controller/
-    FeatureController.java
-  dto/
-    ErrorResponse.java
-    FeatureRequest.java
-    FeatureResponse.java
-    ReleaseHistoryResponse.java
-    ToggleRequest.java
-  entity/
-    FeatureFlag.java
-    ReleaseHistory.java
-  exception/
-    DuplicateFeatureException.java
-    FeatureNotFoundException.java
-    GlobalExceptionHandler.java
-  repository/
-    FeatureRepository.java
-    ReleaseHistoryRepository.java
-  service/
-    FeatureService.java
-  FeatureflagserviceApplication.java
+├── config/
+│   └── OpenApiConfig.java             # Swagger / OpenAPI 3 configuration
+├── controller/
+│   └── FeatureController.java         # REST endpoints
+├── dto/
+│   ├── ErrorResponse.java
+│   ├── FeatureRequest.java
+│   ├── FeatureResponse.java
+│   ├── ReleaseHistoryResponse.java
+│   └── ToggleRequest.java
+├── entity/
+│   ├── FeatureFlag.java               # Flag state per environment
+│   └── ReleaseHistory.java            # Immutable audit record
+├── exception/
+│   ├── DuplicateFeatureException.java
+│   ├── FeatureNotFoundException.java
+│   └── GlobalExceptionHandler.java    # Consistent error responses
+├── repository/
+│   ├── FeatureRepository.java
+│   └── ReleaseHistoryRepository.java
+├── service/
+│   └── FeatureService.java            # Business logic and audit recording
+└── FeatureflagserviceApplication.java
 ```
 
-## Technologies
+The project follows a strict layered pattern: **Controller → Service → Repository → Entity**. DTOs handle all input/output boundaries. A centralized `GlobalExceptionHandler` ensures every error returns a consistent response structure regardless of where it originates.
 
-- Java 17
-- Spring Boot
-- Spring Web MVC
-- Spring Data JPA
-- MySQL
-- Maven
-- Lombok
-- Bean Validation
-- Swagger/OpenAPI
-- JUnit 5, MockMvc, H2 for tests
+---
 
-## Database Setup
+## Technology Stack
 
-Create the database:
+| Layer | Technology | Purpose |
+|---|---|---|
+| Language | Java 17 | LTS, records, sealed classes |
+| Framework | Spring Boot | Auto-configuration, embedded server |
+| Web | Spring Web MVC | REST API layer |
+| Persistence | Spring Data JPA | ORM and repository abstraction |
+| Database | MySQL 8 | Production datasource |
+| Build | Maven | Dependency management and lifecycle |
+| Utilities | Lombok | Boilerplate reduction |
+| Validation | Bean Validation (Jakarta) | Request input validation |
+| API Docs | Swagger / OpenAPI 3 | Interactive documentation |
+| Testing | JUnit 5, MockMvc, H2 | Unit and integration tests |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Java 17+
+- Maven 3.8+
+- MySQL 8.x (for local development)
+
+### Database Setup
+
+**Option 1 — Run the provided script:**
+
+```bash
+mysql -u root -p < database/mysql-setup.sql
+```
+
+**Option 2 — Run manually:**
 
 ```sql
 CREATE DATABASE IF NOT EXISTS feature_flag_db;
-```
 
-Optional dedicated user:
+-- Optional: dedicated service user
+CREATE USER IF NOT EXISTS 'feature_flag_user'@'localhost'
+  IDENTIFIED BY 'feature_flag_password';
 
-```sql
-CREATE USER IF NOT EXISTS 'feature_flag_user'@'localhost' IDENTIFIED BY 'feature_flag_password';
-GRANT ALL PRIVILEGES ON feature_flag_db.* TO 'feature_flag_user'@'localhost';
+GRANT ALL PRIVILEGES ON feature_flag_db.*
+  TO 'feature_flag_user'@'localhost';
+
 FLUSH PRIVILEGES;
 ```
 
-The same script is available at `database/mysql-setup.sql`.
+### Configuration
 
-Default local datasource settings are in `src/main/resources/application.properties`:
+Update `src/main/resources/application.properties` with your MySQL credentials:
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/feature_flag_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+spring.datasource.url=jdbc:mysql://localhost:3306/feature_flag_db\
+  ?createDatabaseIfNotExist=true\
+  &useSSL=false\
+  &allowPublicKeyRetrieval=true\
+  &serverTimezone=UTC
+
 spring.datasource.username=root
 spring.datasource.password=root
 ```
 
-Update the username and password for your local MySQL installation before running the service.
+> **Security note:** Do not commit credentials to version control. Use environment variables or a gitignored `application-local.properties` override in production.
 
-## Run Locally
+### Running the Service
 
 ```bash
+# macOS / Linux
 ./mvnw spring-boot:run
-```
 
-On Windows:
-
-```bash
+# Windows
 mvnw.cmd spring-boot:run
 ```
 
-Swagger UI:
+The service starts on port `8080` by default.
 
-```text
-http://localhost:8080/swagger-ui.html
-```
+| Resource | URL |
+|---|---|
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| OpenAPI JSON | http://localhost:8080/api-docs |
 
-OpenAPI JSON:
-
-```text
-http://localhost:8080/api-docs
-```
+---
 
 ## API Reference
 
-### Create Feature
+### Environments
 
-`POST /api/feature`
+All endpoints scope their data to one of three environments:
 
-Request:
+```
+DEV  |  QA  |  PRODUCTION
+```
 
+---
+
+### `POST /api/feature` — Create a Feature Flag
+
+Registers a new feature flag. Returns `409 Conflict` if the flag already exists in that environment.
+
+**Request:**
 ```json
 {
   "featureName": "dark-mode",
@@ -114,8 +186,7 @@ Request:
 }
 ```
 
-Response `201 Created`:
-
+**Response `201 Created`:**
 ```json
 {
   "id": 1,
@@ -126,18 +197,20 @@ Response `201 Created`:
 }
 ```
 
-### Get Features By Environment
-
-`GET /api/features/{environment}`
-
-Example:
-
+**cURL:**
 ```bash
-curl http://localhost:8080/api/features/DEV
+curl -X POST http://localhost:8080/api/feature \
+  -H "Content-Type: application/json" \
+  -d '{"featureName": "dark-mode", "environment": "DEV", "enabled": false}'
 ```
 
-Response `200 OK`:
+---
 
+### `GET /api/features/{environment}` — List Flags by Environment
+
+Returns all feature flags registered for the given environment.
+
+**Response `200 OK`:**
 ```json
 [
   {
@@ -150,12 +223,18 @@ Response `200 OK`:
 ]
 ```
 
-### Toggle Feature
+**cURL:**
+```bash
+curl http://localhost:8080/api/features/DEV
+```
 
-`PUT /api/toggle-feature`
+---
 
-Request:
+### `PUT /api/toggle-feature` — Toggle a Feature Flag
 
+Enables or disables a feature flag. Automatically writes an entry to the release history audit log. Returns `404 Not Found` if the flag does not exist in the given environment.
+
+**Request:**
 ```json
 {
   "featureName": "dark-mode",
@@ -164,8 +243,7 @@ Request:
 }
 ```
 
-Response `200 OK`:
-
+**Response `200 OK`:**
 ```json
 {
   "id": 1,
@@ -176,12 +254,20 @@ Response `200 OK`:
 }
 ```
 
-### Get Release History
+**cURL:**
+```bash
+curl -X PUT http://localhost:8080/api/toggle-feature \
+  -H "Content-Type: application/json" \
+  -d '{"featureName": "dark-mode", "environment": "DEV", "enabled": true}'
+```
 
-`GET /api/release-history`
+---
 
-Response `200 OK`:
+### `GET /api/release-history` — Audit Log
 
+Returns the complete audit log of all toggle events, ordered by timestamp.
+
+**Response `200 OK`:**
 ```json
 [
   {
@@ -195,15 +281,16 @@ Response `200 OK`:
 ]
 ```
 
-## Validation and Errors
-
-Supported environments:
-
-```text
-DEV, QA, PRODUCTION
+**cURL:**
+```bash
+curl http://localhost:8080/api/release-history
 ```
 
-Example `404 Not Found` response:
+---
+
+## Error Handling
+
+All errors return a consistent response envelope:
 
 ```json
 {
@@ -216,55 +303,53 @@ Example `404 Not Found` response:
 }
 ```
 
-## API Testing
+The `validationErrors` field is populated on `400 Bad Request` responses and contains field-level validation messages.
 
-Run the test suite:
+| Scenario | HTTP Status |
+|---|---|
+| Feature not found | `404 Not Found` |
+| Feature already exists in environment | `409 Conflict` |
+| Invalid environment value | `400 Bad Request` |
+| Missing required field | `400 Bad Request` |
+
+---
+
+## Testing
+
+The test suite runs against an **in-memory H2 database** using the `test` Spring profile — no MySQL installation is needed to run tests.
 
 ```bash
+# macOS / Linux
 ./mvnw test
-```
 
-Windows:
-
-```bash
+# Windows
 mvnw.cmd test
 ```
 
-The integration tests use H2 with the `test` profile and cover:
+**Coverage includes:**
 
-- Feature creation
-- Environment-based feature listing
-- Feature toggle workflow
-- Release history audit creation
-- Not found handling
+- Feature flag creation and duplicate detection
+- Environment-scoped flag listing
+- Toggle workflow (enabled → disabled → enabled)
+- Release history audit record creation and retrieval
+- `404` handling for missing features
 
-Postman collection:
+**Postman collection** for manual end-to-end testing:
 
-```text
+```
 postman/Enterprise-Feature-Flag-Service.postman_collection.json
 ```
 
-## Git Commit Flow
+---
 
-Development was organized using professional, reviewable commits:
+## Roadmap
 
-1. Initial Spring Boot project setup
-2. Configured MySQL datasource and JPA properties
-3. Added feature flag and release history entities
-4. Implemented JPA repositories for feature management
-5. Added DTO validation and exception handling
-6. Added service layer for feature toggle workflows
-7. Built REST APIs for feature flag operations
-8. Added Swagger API documentation
-9. Completed API testing for feature workflows
-10. Completed README and API usage examples
-
-## Future Improvements
-
-- Add role-based access control for release managers and auditors
-- Add rollback endpoints based on release history
-- Add environment-level approval workflows
-- Add pagination and filtering for release history
-- Add Flyway or Liquibase migrations
-- Add Docker Compose for MySQL and the service
-- Publish OpenAPI contracts into CI
+| Feature | Description |
+|---|---|
+| Role-based access control | Separate roles for release managers and auditors |
+| Rollback endpoint | Restore a previous flag state from the release history |
+| Approval workflows | Require sign-off before promoting a flag to `PRODUCTION` |
+| Pagination and filtering | Cursor-based pagination for release history queries |
+| Database migrations | Flyway or Liquibase for schema version control |
+| Docker Compose | One-command local setup for MySQL and the service |
+| CI integration | Publish OpenAPI contracts as part of the build pipeline |
